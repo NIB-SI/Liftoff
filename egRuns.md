@@ -73,3 +73,22 @@ from liftoff import fix_overlapping_features, lift_features, liftoff_utils, alig
     extract_features.extract_features_to_lift()
     ...
 ```
+
+[https://github.com/NIB-SI/Liftoff/blob/master/liftoff/run_liftoff.py](https://github.com/NIB-SI/Liftoff/blob/master/liftoff/run_liftoff.py)
+
+no use for genes only
+
+```
+from liftoff import write_new_gff, liftover_types, polish, align_features, lift_features
+    ...
+    parser.add_argument('-polish', required=False, action='store_true', default = False)
+    ...
+    def find_and_polish_broken_cds()
+        ...
+        align_features.align_features_to_target()
+        ...
+        lift_features.lift_all_features()
+        ...
+```
+    
+```
