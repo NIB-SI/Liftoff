@@ -26,7 +26,7 @@ for i in "${a[@]}"
                         -chroms ../input/chroms.txt \
                         -unplaced ../input/unplaced_SCAFFOLDS.txt \
                         ../input/REFERENCE.fasta \
-                        ../input/StPGSC4.04n_2018-01-18.fasta > ../output/output_subdir/MAPPINGS_a-${aa}_s-${ss}_flank-${fflank}_log.txt 2>&1;
+                        ../input/QUERY.fasta > ../output/output_subdir/MAPPINGS_a-${aa}_s-${ss}_flank-${fflank}_log.txt 2>&1;
                         rm -r ../output/output_subdir/MAPPINGS_input_files;
                     done
             done
