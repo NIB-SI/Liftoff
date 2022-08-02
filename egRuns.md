@@ -1,3 +1,5 @@
+Liftoff1.6.3, minimap v2.24
+
 # flank as a percentage
 
 
