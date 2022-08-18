@@ -84,9 +84,7 @@ def parse_args(arglist):
     )
 
     aligngrp = parser.add_argument_group('Alignments')
-    aligngrp.add_argument('-mm2_options', metavar='=STR', type=str, default='-a --end-bonus '
-                                                                            '5 --eqx -N 50 '
-                                                                            '-p 0.5',
+    aligngrp.add_argument('-mm2_options', metavar='=STR', type=str, #default='-a --end-bonus 5 --eqx -N 50 -p 0.5',
                           help='space delimited minimap2 parameters. By default ="-a --end-bonus 5 --eqx -N 50 -p 0.5"')
     aligngrp.add_argument(
         '-a', default=0.5, metavar='A', type=float,
@@ -158,14 +156,14 @@ def parse_args(arglist):
     args = parser.parse_args(arglist)
     if '-a' not in args.mm2_options:
         args.mm2_options += ' -a'
-    if '--eqx' not in args.mm2_options:
-        args.mm2_options += ' --eqx'
-    if '-N' not in args.mm2_options:
-        args.mm2_options += " -N 50"
-    if '-p' not in args.mm2_options:
-        args.mm2_options += " -p 0.5"
-    if '--end-bonus' not in args.mm2_options:
-        args.mm2_options += "--end-bonus 5"
+    #if '--eqx' not in args.mm2_options:
+    #    args.mm2_options += ' --eqx'
+    #if '-N' not in args.mm2_options:
+    #    args.mm2_options += " -N 50"
+    #if '-p' not in args.mm2_options:
+    #    args.mm2_options += " -p 0.5"
+    #if '--end-bonus' not in args.mm2_options:
+    #    args.mm2_options += "--end-bonus 5"
     if (float(args.s) > float(args.sc)):
         parser.error("-sc must be greater than or equal to -s")
     if (args.chroms is None and args.unplaced is not None):
