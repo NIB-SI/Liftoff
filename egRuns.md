@@ -19,6 +19,7 @@ for i in "${a[@]}"
                         fflank=$k
                         echo "Processing a:" ${aa} "s:" ${ss} "flank:" ${fflank}
                         liftoff \
+                        -mm2_options="-x asm5" \
                         -g ../input/QUERY_genes.gff3 \
                         -o ../output/output_subdir/MAPPINGS_a-${aa}_s-${ss}_flank-${fflank}.gff3 \
                         -u ../output/output_subdir/MAPPINGS_a-${aa}_s-${ss}_flank-${fflank}_unmapped_features.txt \
