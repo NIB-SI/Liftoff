@@ -56,11 +56,13 @@ def align_single_chroms(ref_chroms, target_chroms, threads, args, genome_size, l
         split_prefix = args.dir + "/" + features_name + "_to_" + target_prefix + "_split"
         command = [minimap2_path, '-o', output_file, target_file, features_file] + args.mm2_options.split(" ") + [
             "--split-prefix", split_prefix, '-t', threads_arg]
+        print(" ".join(command))
         subprocess.run(command)
     else:
         minimap2_index = build_minimap2_index(target_file, args, threads_arg, minimap2_path)
         command = [minimap2_path, '-o', output_file, minimap2_index, features_file] + args.mm2_options.split(" ") + [
             '-t', threads_arg]
+        print(" ".join(command))
         subprocess.run(command)
     return output_file
 
@@ -106,6 +108,7 @@ def get_target_prefix_name(target_chroms, index, args, liftover_type):
 
 def build_minimap2_index(target_file, args, threads, minimap2_path):
     if path.exists(target_file + ".mmi") is False:
+        print(" ".join([minimap2_path, '-d', target_file + ".mmi", target_file] + args.mm2_options.split(" ") + ['-t', threads ]))
         subprocess.run(
             [minimap2_path, '-d', target_file + ".mmi", target_file] + args.mm2_options.split(" ") + ['-t',
              threads ])
