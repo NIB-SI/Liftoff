@@ -84,8 +84,8 @@ def parse_args(arglist):
     )
 
     aligngrp = parser.add_argument_group('Alignments')
-    aligngrp.add_argument('-mm2_options', metavar='=STR', type=str, default='-a --end-bonus 5 --eqx -N 50 -p 0.5',
-                          help='space delimited minimap2 parameters. By default ="-a --end-bonus 5 --eqx -N 50 -p 0.5"')
+    aligngrp.add_argument('-mm2_options', metavar='=STR', type=str, default='-a --end-bonus 5 --eqx -N 50 -p 0.8',
+                          help='space delimited minimap2 parameters. By default ="-a --end-bonus 5 --eqx -N 50 -p 0.8"')
     aligngrp.add_argument(
         '-a', default=0.5, metavar='A', type=float,
         help='designate a feature mapped only if it aligns with coverage ≥A; by default A=0.5',
@@ -158,10 +158,10 @@ def parse_args(arglist):
         args.mm2_options += ' -a'
     if '--eqx' not in args.mm2_options:
         args.mm2_options += ' --eqx'
-    if '-N' not in args.mm2_options:
-        args.mm2_options += " -N 50"
-    if '-p' not in args.mm2_options:
-        args.mm2_options += " -p 0.5"
+    #if '-N' not in args.mm2_options:
+    #    args.mm2_options += " -N 50"
+    #if '-p' not in args.mm2_options:
+    #    args.mm2_options += " -p 0.5"
     if '--end-bonus' not in args.mm2_options:
         args.mm2_options += " --end-bonus 5"
     if (float(args.s) > float(args.sc)):
