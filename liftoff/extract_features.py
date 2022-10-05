@@ -195,7 +195,7 @@ def write_gene_sequences_to_file(chrom_name, reference_fasta_name, reference_fas
             chrom_seq = reference_fasta_idx[current_chrom][:].seq
         if parent.seqid == chrom_name or chrom_name == reference_fasta_name:
             gene_length = parent.end - parent.start + 1
-            parent.start = round(max(1, parent.start - args.flank + gene_length))
-            parent.end = round(min(parent.end + args.flank + gene_length, len(chrom_seq)))
+            parent.start = round(max(1, parent.start - (args.flank + gene_length)))
+            parent.end = round(min(parent.end + (args.flank + gene_length), len(chrom_seq)))
             parent_seq = chrom_seq[parent.start - 1: parent.end]
             fasta_out.write(">" + parent.id + "\n" + str(parent_seq) + "\n")
