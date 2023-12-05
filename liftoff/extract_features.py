@@ -22,25 +22,24 @@ def extract_features_to_lift(ref_chroms, liftover_type, parents_to_lift, args):
 
 def create_feature_db_connections(args):
     gffutils.constants.ignore_url_escape_characters = True
-    if args.infer_transcripts is True:
-        disable_transcripts = False
-    else:
-        disable_transcripts = True
-    if args.infer_genes is True:
-        disable_genes = False
-    else:
-        disable_genes = True
-    feature_db = build_database(args.db, args.g, disable_transcripts, disable_genes)
-    return feature_db
+    disable_transcripts = args.infer_transcripts is not True
+    disable_genes = args.infer_genes is not True
+    return build_database(args.db, args.g, disable_transcripts, disable_genes)
 
 
 
 def build_database(db, gff_file, disable_transcripts, disable_genes,):
     if db is None:
         try:
-            feature_db = gffutils.create_db(gff_file, gff_file + "_db", merge_strategy="create_unique", force=True,
-                                            disable_infer_transcripts=disable_transcripts,
-                                            disable_infer_genes=disable_genes, verbose=True)
+            feature_db = gffutils.create_db(
+                gff_file,
+                f"{gff_file}_db",
+                merge_strategy="create_unique",
+                force=True,
+                disable_infer_transcripts=disable_transcripts,
+                disable_infer_genes=disable_genes,
+                verbose=True,
+            )
         except:
             find_problem_line(gff_file)
     else:
@@ -61,7 +60,7 @@ def find_problem_line(gff_file):
             try:
                 gffutils.create_db(line, ":memory:", from_string=True, force=True)
             except:
-                sys.exit("ERROR:Incorrect GFF/GTF syntax on line " + str(i + 1))
+                sys.exit(f"ERROR:Incorrect GFF/GTF syntax on line {str(i + 1)}")
 
 
 def seperate_parents_and_children(feature_db, parent_types_to_lift):
@@ -88,7 +87,7 @@ def seperate_parents_and_children(feature_db, parent_types_to_lift):
 def add_parents(parent_dict, child_dict, highest_parents, parent_types_to_lift, feature_db):
     c = feature_db.conn.cursor()
     cond = ', '.join('"{0}"'.format(w) for w in highest_parents)
-    query =  "SELECT * FROM features WHERE id IN ({})".format(cond)
+    query = f"SELECT * FROM features WHERE id IN ({cond})"
     for result in c.execute(query):
         feature_tup = tuple(result)
         parent = new_feature.new_feature(feature_tup[0], feature_tup[3], feature_tup[1], feature_tup[2],feature_tup[7],
@@ -101,7 +100,7 @@ def add_parents(parent_dict, child_dict, highest_parents, parent_types_to_lift, 
 def add_children(parent_dict, child_dict, lowest_children, feature_db):
     c = feature_db.conn.cursor()
     cond = ', '.join('"{0}"'.format(w) for w in lowest_children)
-    query = "select * from relations join features on features.id  = relations.child where relations.child IN ({})".format(cond)
+    query = f"select * from relations join features on features.id  = relations.child where relations.child IN ({cond})"
     c.execute(query)
     results = c.fetchall()
     added_children_ids = []
@@ -127,13 +126,18 @@ def add_children(parent_dict, child_dict, lowest_children, feature_db):
 
 def add_parent_tag(feature, feature_db):
     parent_id = ""
-    parents = [parent for parent in feature_db.parents(feature.id, level=1) if feature.id != parent.id]
-    if len(parents) > 0:
+    if parents := [
+        parent
+        for parent in feature_db.parents(feature.id, level=1)
+        if feature.id != parent.id
+    ]:
         parent_id = parents[0].id
-    else:
-        parents = [parent for parent in feature_db.parents(feature.id) if feature.id != parent.id]
-        if len(parents) > 0:
-            parent_id = parents[0].id
+    elif parents := [
+        parent
+        for parent in feature_db.parents(feature.id)
+        if feature.id != parent.id
+    ]:
+        parent_id = parents[0].id
     feature.attributes["Parent"] = [parent_id]
 
 
@@ -141,7 +145,7 @@ def add_parent_tag(feature, feature_db):
 def add_intermediates(intermediate_ids, intermediate_dict, feature_db):
     c = feature_db.conn.cursor()
     cond = ', '.join('"{0}"'.format(w) for w in intermediate_ids)
-    query =  "select * from features where id IN ({})".format(cond)
+    query = f"select * from features where id IN ({cond})"
     for result in c.execute(query):
         feature_tup = tuple(result)
         intermediate_feature = new_feature.new_feature(feature_tup[0], feature_tup[3], feature_tup[1], feature_tup[2],
@@ -155,7 +159,7 @@ def add_intermediates(intermediate_ids, intermediate_dict, feature_db):
 def get_gene_sequences(parent_dict, ref_chroms, args, liftover_type):
     fai = Fasta(args.reference)
     if liftover_type == "unplaced":
-        open(args.dir + "/unplaced_genes.fa", 'w')
+        open(f"{args.dir}/unplaced_genes.fa", 'w')
     for chrom in ref_chroms:
         fasta_out = get_fasta_out(chrom, args.reference, liftover_type, args.dir)
         sorted_parents = sorted(list(parent_dict.values()), key=lambda x: x.seqid)
@@ -168,7 +172,10 @@ def get_gene_sequences(parent_dict, ref_chroms, args, liftover_type):
 
 
 def get_fasta_out(chrom_name, reference_fasta_name, liftover_type, inter_files):
-    if chrom_name == reference_fasta_name and (liftover_type == "chrm_by_chrm" or liftover_type == "copies"):
+    if chrom_name == reference_fasta_name and liftover_type in [
+        "chrm_by_chrm",
+        "copies",
+    ]:
         fasta_out_name = "reference_all"
     elif liftover_type == "unmapped":
         fasta_out_name = "unmapped_to_expected_chrom"
@@ -176,11 +183,11 @@ def get_fasta_out(chrom_name, reference_fasta_name, liftover_type, inter_files):
         fasta_out_name = "unplaced"
     else:
         fasta_out_name = chrom_name
-    if liftover_type == "unplaced":
-        fasta_out = open(inter_files + "/" + fasta_out_name + "_genes.fa", 'a')
-    else:
-        fasta_out = open(inter_files + "/" + fasta_out_name + "_genes.fa", 'w')
-    return fasta_out
+    return (
+        open(f"{inter_files}/{fasta_out_name}_genes.fa", 'a')
+        if liftover_type == "unplaced"
+        else open(f"{inter_files}/{fasta_out_name}_genes.fa", 'w')
+    )
 
 
 def write_gene_sequences_to_file(chrom_name, reference_fasta_name, reference_fasta_idx, parents, fasta_out, args):
@@ -198,4 +205,4 @@ def write_gene_sequences_to_file(chrom_name, reference_fasta_name, reference_fas
             parent.start = round(max(1, parent.start - (args.flank)))
             parent.end = round(min(parent.end + (args.flank), len(chrom_seq)))
             parent_seq = chrom_seq[parent.start - 1: parent.end]
-            fasta_out.write(">" + parent.id + "\n" + str(parent_seq) + "\n")
+            fasta_out.write(f">{parent.id}" + "\n" + str(parent_seq) + "\n")

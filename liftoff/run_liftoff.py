@@ -172,14 +172,13 @@ def parse_args(arglist):
 
 
 def parse_chrm_files(chroms_file):
-    chroms = open(chroms_file, 'r')
-    ref_chroms, target_chroms = [], []
-    for line in chroms.readlines():
-        ref_and_target_chrom = line.rstrip().split(",")
-        ref_chroms.append(ref_and_target_chrom[0])
-        if len(ref_and_target_chrom) > 1:
-            target_chroms.append(ref_and_target_chrom[1])
-    chroms.close()
+    with open(chroms_file, 'r') as chroms:
+        ref_chroms, target_chroms = [], []
+        for line in chroms:
+            ref_and_target_chrom = line.rstrip().split(",")
+            ref_chroms.append(ref_and_target_chrom[0])
+            if len(ref_and_target_chrom) > 1:
+                target_chroms.append(ref_and_target_chrom[1])
     return ref_chroms, target_chroms
 
 
@@ -187,8 +186,7 @@ def get_parent_features_to_lift(feature_types_file):
     feature_types = ["gene"]
     if feature_types_file is not None:
         f = open(feature_types_file)
-        for line in f.readlines():
-            feature_types.append(line.rstrip())
+        feature_types.extend(line.rstrip() for line in f)
     return feature_types
 
 
@@ -215,10 +213,9 @@ def map_features_from_unplaced_seq(unmapped_features, lifted_feature_list, featu
 
 
 def write_unmapped_features_file(out_arg, unmapped_features):
-    unmapped_out = open(out_arg, 'w')
-    for gene in unmapped_features:
-        unmapped_out.write(gene.id + "\n")
-    unmapped_out.close()
+    with open(out_arg, 'w') as unmapped_out:
+        for gene in unmapped_features:
+            unmapped_out.write(gene.id + "\n")
 
 
 def map_extra_copies(args, lifted_feature_list, feature_hierarchy, feature_db, ref_parent_order):

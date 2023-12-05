@@ -11,18 +11,16 @@ from os import path
 
 def align_features_to_target(ref_chroms, target_chroms, args, feature_hierarchy, liftover_type, unmapped_features):
     if args.subcommand == "polish":
-        sam_files = [args.dir + "/polish.sam"]
+        sam_files = [f"{args.dir}/polish.sam"]
     else:
         target_fasta_dict = split_target_sequence(target_chroms, args.target, args.dir)
         genome_size = get_genome_size(target_fasta_dict)
         threads_per_alignment = max(1, math.floor(int(args.p) / len(ref_chroms)))
-        sam_files = []
         pool = Pool(int(args.p))
         print("aligning features")
         func = partial(align_single_chroms, ref_chroms, target_chroms, threads_per_alignment, args, genome_size,
                        liftover_type)
-        for result in pool.imap_unordered(func, np.arange(0, len(target_chroms))):
-            sam_files.append(result)
+        sam_files = list(pool.imap_unordered(func, np.arange(0, len(target_chroms))))
         pool.close()
         pool.join()
     return parse_all_sam_files(feature_hierarchy, unmapped_features, liftover_type, sam_files)
@@ -33,16 +31,13 @@ def split_target_sequence(target_chroms, target_fasta_name, inter_files):
     target_fasta_dict = Fasta(target_fasta_name, key_function=lambda x: x.split()[0])
     for chrm in target_chroms:
         if chrm != target_fasta_name:
-            out = open(inter_files + "/" + chrm + ".fa", 'w')
-            out.write(">" + chrm + "\n" + str(target_fasta_dict[chrm]))
+            out = open(f"{inter_files}/{chrm}.fa", 'w')
+            out.write(f">{chrm}" + "\n" + str(target_fasta_dict[chrm]))
     return target_fasta_dict
 
 
 def get_genome_size(target_fasta_dict):
-    genome_size = 0
-    for value in target_fasta_dict.values():
-        genome_size += len(value)
-    return genome_size
+    return sum(len(value) for value in target_fasta_dict.values())
 
 
 def align_single_chroms(ref_chroms, target_chroms, threads, args, genome_size, liftover_type, index):
@@ -53,22 +48,23 @@ def align_single_chroms(ref_chroms, target_chroms, threads, args, genome_size, l
     minimap2_path = get_minimap_path(args)
     target_prefix = get_target_prefix_name(target_chroms, index, args, liftover_type)
     if genome_size > max_single_index_size:
-        split_prefix = args.dir + "/" + features_name + "_to_" + target_prefix + "_split"
+        split_prefix = f"{args.dir}/{features_name}_to_{target_prefix}_split"
         command = [minimap2_path, '-o', output_file, target_file, features_file] + args.mm2_options.split(" ") + [
             "--split-prefix", split_prefix, '-t', threads_arg]
-        print(" ".join(command))
-        subprocess.run(command)
     else:
         minimap2_index = build_minimap2_index(target_file, args, threads_arg, minimap2_path)
         command = [minimap2_path, '-o', output_file, minimap2_index, features_file] + args.mm2_options.split(" ") + [
             '-t', threads_arg]
-        print(" ".join(command))
-        subprocess.run(command)
+    print(" ".join(command))
+    subprocess.run(command)
     return output_file
 
 
 def get_features_file(ref_chroms, args, liftover_type, index):
-    if ref_chroms[index] == args.reference and (liftover_type == "chrm_by_chrm" or liftover_type == "copies"):
+    if ref_chroms[index] == args.reference and liftover_type in [
+        "chrm_by_chrm",
+        "copies",
+    ]:
         features_name = 'reference_all'
     elif liftover_type == "unmapped":
         features_name = "unmapped_to_expected_chrom"
@@ -76,7 +72,7 @@ def get_features_file(ref_chroms, args, liftover_type, index):
         features_name = "unplaced"
     else:
         features_name = ref_chroms[index]
-    return args.dir + "/" + features_name + "_genes.fa", features_name
+    return f"{args.dir}/{features_name}_genes.fa", features_name
 
 
 def get_target_file_and_output_file(liftover_type, target_chroms, index, features_name, args):
@@ -84,35 +80,41 @@ def get_target_file_and_output_file(liftover_type, target_chroms, index, feature
         target_file = args.target
         out_file_target = "target_all"
     else:
-        target_file = args.dir + "/" + target_chroms[index] + ".fa"
+        target_file = f"{args.dir}/{target_chroms[index]}.fa"
         out_file_target = target_chroms[index]
-    output_file = args.dir + "/" + features_name + "_to_" + out_file_target + ".sam"
+    output_file = f"{args.dir}/{features_name}_to_{out_file_target}.sam"
     return target_file, output_file
 
 
 def get_minimap_path(args):
-    if args.m is None:
-        minimap2 = "minimap2"
-    else:
-        minimap2 = args.m
-    return minimap2
+    return "minimap2" if args.m is None else args.m
 
 
 def get_target_prefix_name(target_chroms, index, args, liftover_type):
-    if liftover_type != "chrm_by_chrm" or target_chroms[0] == args.target:
-        prefix = "target_all"
-    else:
-        prefix = target_chroms[index]
-    return prefix
+    return (
+        "target_all"
+        if liftover_type != "chrm_by_chrm" or target_chroms[0] == args.target
+        else target_chroms[index]
+    )
 
 
 def build_minimap2_index(target_file, args, threads, minimap2_path):
-    if path.exists(target_file + ".mmi") is False:
-        print(" ".join([minimap2_path, '-d', target_file + ".mmi", target_file] + args.mm2_options.split(" ") + ['-t', threads ]))
+    if path.exists(f"{target_file}.mmi") is False:
+        print(
+            " ".join(
+                [minimap2_path, '-d', f"{target_file}.mmi", target_file]
+                + args.mm2_options.split(" ")
+                + ['-t', threads]
+            )
+        )
         subprocess.run(
-            [minimap2_path, '-d', target_file + ".mmi", target_file] + args.mm2_options.split(" ") + ['-t',
-             threads ])
-    return target_file + ".mmi"
+            (
+                [minimap2_path, '-d', f"{target_file}.mmi", target_file]
+                + args.mm2_options.split(" ")
+                + ['-t', threads]
+            )
+        )
+    return f"{target_file}.mmi"
 
 
 def parse_all_sam_files(feature_hierarchy, unmapped_features, liftover_type, sam_files):
@@ -159,12 +161,11 @@ def add_alignment(ref_seq, align_count_dict, search_type, name_dict, aln_id, fea
 
 def edit_name(search_type, ref_seq, name_dict):
     if search_type != "copies":
-        return ref_seq.query_name + "_0"
-    else:
-        if ref_seq.query_name not in name_dict:
-            name_dict[ref_seq.query_name] = 0
-        name_dict[ref_seq.query_name] += 1
-        return ref_seq.query_name + "_" + str(name_dict[ref_seq.query_name])
+        return f"{ref_seq.query_name}_0"
+    if ref_seq.query_name not in name_dict:
+        name_dict[ref_seq.query_name] = 0
+    name_dict[ref_seq.query_name] += 1
+    return f"{ref_seq.query_name}_{str(name_dict[ref_seq.query_name])}"
 
 
 def get_aligned_blocks(alignment, aln_id, feature_hierarchy, search_type):
@@ -215,7 +216,7 @@ def is_end_to_end_alignment(parent, query_start, query_end):
 
 
 def base_is_aligned(operation, cigar_operations):
-    return operation == cigar_operations["match"] or operation == cigar_operations["mismatch"]
+    return operation in [cigar_operations["match"], cigar_operations["mismatch"]]
 
 
 def add_aligned_base(operation, query_block_pos, reference_block_pos, length, cigar_operations, mismatches):
@@ -228,11 +229,17 @@ def add_aligned_base(operation, query_block_pos, reference_block_pos, length, ci
 
 
 def adjust_position(operation, query_block_pos, reference_block_pos, length, cigar_operations):
-    if operation == cigar_operations["match"] or operation == cigar_operations["mismatch"] or operation == \
-            cigar_operations["insertion"]:
+    if operation in [
+        cigar_operations["match"],
+        cigar_operations["mismatch"],
+        cigar_operations["insertion"],
+    ]:
         query_block_pos += length
-    if operation == cigar_operations["match"] or operation == cigar_operations["mismatch"] or operation == \
-            cigar_operations["deletion"]:
+    if operation in [
+        cigar_operations["match"],
+        cigar_operations["mismatch"],
+        cigar_operations["deletion"],
+    ]:
         reference_block_pos += length
     return query_block_pos, reference_block_pos
 
@@ -261,13 +268,15 @@ def find_overlapping_children(aln, children_coords, parent):
         child_start, child_end = min(relative_start, relative_end), max(relative_start, relative_end)
         overlap = liftoff_utils.count_overlap(child_start, child_end, aln.query_block_start, aln.query_block_end)
         if overlap > 0:
-            overlapping_children.append(child_start)
-            overlapping_children.append(child_end)
+            overlapping_children.extend((child_start, child_end))
     return overlapping_children
 
 
 def is_alignment_gap(operation, cigar_operations):
-    return operation == cigar_operations["insertion"] or operation == cigar_operations["deletion"]
+    return operation in [
+        cigar_operations["insertion"],
+        cigar_operations["deletion"],
+    ]
 
 
 def end_block_at_gap(operation, query_block_pos, reference_block_pos, length, cigar_operations):
@@ -276,7 +285,13 @@ def end_block_at_gap(operation, query_block_pos, reference_block_pos, length, ci
                                                            length, cigar_operations)
     query_block_start = query_block_pos
     reference_block_start = reference_block_pos
-    return mismatches, query_block_start, reference_block_start, query_block_pos, reference_block_pos
+    return (
+        mismatches,
+        query_block_start,
+        reference_block_start,
+        query_block_start,
+        reference_block_start,
+    )
 
 
 def remove_alignments_without_children(all_aligned_blocks, unmapped_features, feature_hierarchy):

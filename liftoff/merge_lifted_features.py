@@ -16,7 +16,7 @@ def merge_lifted_features(mapped_children, parent, unmapped_features, aln_cov_th
             non_parents.append((child_feature, child_feature.attributes["Parent"][0]))
         else:
             top_target_feature = child_feature
-    while (len(non_parents) != 0):
+    while non_parents:
         non_parents, top_target_feature = create_parents(non_parents, parent, feature_hierarchy, feature_list)
     final_features = process_final_features_list(feature_list, top_target_feature, seq_id, seq_id_threshold, aln_cov,
                                                  aln_cov_threshold,
@@ -55,11 +55,11 @@ def make_new_parent(feature_list, parent, feature_hierarchy):
 
 
 def get_ref_parent(parent, feature_hierarchy):
-    if parent in feature_hierarchy.parents:
-        ref_parent = feature_hierarchy.parents[parent]
-    else:
-        ref_parent = feature_hierarchy.intermediates[parent]
-    return ref_parent
+    return (
+        feature_hierarchy.parents[parent]
+        if parent in feature_hierarchy.parents
+        else feature_hierarchy.intermediates[parent]
+    )
 
 
 def process_final_features_list(feature_list, top_target_feature, seq_id, seq_id_threshold, aln_cov, aln_cov_threshold,
@@ -74,6 +74,6 @@ def process_final_features_list(feature_list, top_target_feature, seq_id, seq_id
     else:
         top_target_feature.score = 1 - seq_id
         top_target_feature.attributes["copy_num_ID"] = [copy_id]
-        top_target_feature.attributes["coverage"] = [str(aln_cov)[0:5]]
-        top_target_feature.attributes["sequence_ID"] = [str(seq_id)[0:5]]
+        top_target_feature.attributes["coverage"] = [str(aln_cov)[:5]]
+        top_target_feature.attributes["sequence_ID"] = [str(seq_id)[:5]]
     return final_features

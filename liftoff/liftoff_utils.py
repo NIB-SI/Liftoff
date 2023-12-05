@@ -2,16 +2,11 @@ import numpy as np
 
 
 def count_overlap(start1, end1, start2, end2):
-    overlap = min(end1, end2) - max(start1, start2) +1
-    return overlap
+    return min(end1, end2) - max(start1, start2) +1
 
 
 def get_relative_child_coord(parent, coord, is_reverse):
-    if is_reverse:
-        relative_coord = parent.end - coord
-    else:
-        relative_coord = coord - parent.start
-    return relative_coord
+    return parent.end - coord if is_reverse else coord - parent.start
 
 
 def merge_children_intervals(children):
@@ -54,22 +49,17 @@ def find_parent_order(parents):
 def convert_id_to_original(id):
     frag_split = id.split("_frag")[0]
     copy_tag_len = len(frag_split.split("_")[-1])
-    original_parent_name = frag_split[:-copy_tag_len - 1]
-    return original_parent_name
+    return frag_split[:-copy_tag_len - 1]
 
 
 def get_copy_tag(id):
     copy_tag_len = len(id.split("_")[-1])
-    copy_tag = id[-copy_tag_len - 1:]
-    return copy_tag
+    return id[-copy_tag_len - 1:]
 
 
 def get_strand(aln, parent):
     if aln.is_reverse:
-        if parent.strand == "-":
-            strand = '+'
-        else:
-            strand = "-"
+        strand = '+' if parent.strand == "-" else "-"
     else:
         strand = parent.strand
     return strand
@@ -114,9 +104,8 @@ def find_nonoverlapping_upstream_neighbor(parent_order, feature_name):
     feature_location = np.where(parent_order[:, 0] == feature_name)[0][0]
     neighbor_indx = feature_location - 1
     neighbor = parent_order[neighbor_indx][1]
-    neighbor_id = parent_order[neighbor_indx][0]
     feature = parent_order[neighbor_indx + 1][1]
     if neighbor.seqid != feature.seqid or neighbor_indx < 0:
         return None
     else:
-        return neighbor_id
+        return parent_order[neighbor_indx][0]

@@ -7,9 +7,7 @@ def lift_all_features(alns, threshold, feature_db,  feature_hierarchy,
     features_to_lift = feature_hierarchy.parents
     feature_order = get_feature_order(feature_db)
     alignments = sort_alignments(features_to_lift, alns)
-    num_features = 0
     for alignment in alignments:
-        num_features += 1
         preivous_feature_start, previous_feature_seq, previous_feature_ref_start = find_neighbor_location(
             feature_hierarchy.parents, alignment, lifted_feature_list, ref_parent_order)
 
@@ -43,16 +41,17 @@ def get_feature_order(gene_db):
 
 
 def sort_alignments(parent_dict, alignments):
-    parent_list = []
-    order = 0
-    order_dict = {}
     values = list(alignments.values())
-    for alignment in alignments:
-        parent_list.append(parent_dict[liftoff_utils.convert_id_to_original(alignments[alignment][0].query_name)])
+    parent_list = [
+        parent_dict[
+            liftoff_utils.convert_id_to_original(
+                alignments[alignment][0].query_name
+            )
+        ]
+        for alignment in alignments
+    ]
     parent_list.sort(key=lambda x: (x.seqid, x.start))
-    for parent in parent_list:
-        order_dict[parent.id] = order
-        order += 1
+    order_dict = {parent.id: order for order, parent in enumerate(parent_list)}
     values.sort(key=lambda x: order_dict[liftoff_utils.convert_id_to_original(x[0].query_name)])
     return values
 
@@ -61,7 +60,7 @@ def find_neighbor_location(ref_parents, alignment, lifted_feature_list, ref_pare
     ref_feature = ref_parents[liftoff_utils.convert_id_to_original(alignment[0].query_name)]
     ref_neighbor_name = liftoff_utils.find_nonoverlapping_upstream_neighbor(ref_parent_order, ref_feature.id)
     if ref_neighbor_name is not None:
-        ref_neighbor_key = ref_neighbor_name + "_0"
+        ref_neighbor_key = f"{ref_neighbor_name}_0"
         if ref_neighbor_key in lifted_feature_list:
             previous_feature_start = lifted_feature_list[ref_neighbor_key][0].start
             previous_feature_seq = lifted_feature_list[ref_neighbor_key][0].seqid

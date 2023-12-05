@@ -17,7 +17,7 @@ def polish_annotations(feature_list, ref_faidx, target_faidx, args, feature_heir
     transcript_list = [feature for feature in target_sub_features if "matches_ref_protein" in feature.attributes]
     good_transcripts = [tran for tran in transcript_list if  tran.attributes["valid_ORF"] == ["True"]]
     if len(transcript_list) != len(good_transcripts):
-        output_sam = open(args.dir+"/polish.sam", 'w')
+        output_sam = open(f"{args.dir}/polish.sam", 'w')
         write_sam_header(target_faidx, output_sam)
         target_gene = target_sub_features[0]
         polish_annotation(ref_gene, target_gene, ref_sub_features, target_sub_features, ref_faidx,
@@ -91,7 +91,7 @@ def get_longest_ORF(cds_seq):
     ORFs = [[m.start(), m.end()] for m in re.finditer(r'ATG(?:(?!TAA|TAG|TGA)...)*(?:TAA|TAG|TGA)',
                                                       str(cds_seq))]
     ORFs.sort(key=lambda x: x[1] - x[0])
-    if len(ORFs) >0 :
+    if ORFs:
         possible_ORF = ORFs[-1]
         if  possible_ORF[1] - possible_ORF[0] != len(cds_seq) and possible_ORF[1] - possible_ORF[0] >= \
                 180:
@@ -142,7 +142,7 @@ def missing_start(protein):
 
 
 def missing_stop(protein):
-    return "*" != protein[-1]
+    return protein[-1] != "*"
 
 
 def inframe_stop(protein):
@@ -165,7 +165,7 @@ def polish_annotation(ref_gene, target_gene, ref_children, target_children, ref_
     ref_exons = [feature for feature in ref_children if feature.featuretype == "exon"]
     target_exons = [feature for feature in target_children if feature.featuretype == "exon"]
     ref_CDS = [feature for feature in ref_children if feature.featuretype == "CDS"]
-    if len(ref_exons) == 0:
+    if not ref_exons:
         ref_exons = ref_CDS
         target_exons = [feature for feature in target_children if feature.featuretype == "CDS"]
     ref_CDS_intervals = liftoff_utils.merge_children_intervals(ref_CDS)
@@ -238,15 +238,20 @@ def make_scoring_matrix(match_reward_coding):
 def get_target_interval(exon_group, target_exons, ref_interval):
     target_group = []
     for ref_exon in exon_group:
-        matching_target_exon = [exon for exon in target_exons if exon.id == ref_exon]
-        if len(matching_target_exon) !=0:
+        if matching_target_exon := [
+            exon for exon in target_exons if exon.id == ref_exon
+        ]:
             target_group.append(matching_target_exon[0])
-    if len(target_group) != 0:
-        start = min([exon.start for exon in target_group])
-        end = max([exon.end for exon in target_group])
+    if target_group:
+        start = min(exon.start for exon in target_group)
+        end = max(exon.end for exon in target_group)
     else:
-        start = min([exon.start for exon in target_exons]) - (ref_interval[1]-ref_interval[0])
-        end = max([exon.end for exon in target_exons]) + (ref_interval[1]-ref_interval[0])
+        start = min(exon.start for exon in target_exons) - (
+            ref_interval[1] - ref_interval[0]
+        )
+        end = max(exon.end for exon in target_exons) + (
+            ref_interval[1] - ref_interval[0]
+        )
     return [start, end]
 
 
@@ -255,8 +260,7 @@ def get_feature_sequence(interval, fa, chrm,  flank):
     flank_start = get_flank_start(interval[0], flank)
     flank_end = get_flank_end(interval[1], flank, len(chrom_seq))
     seq = chrom_seq[flank_start - 1: flank_end]
-    final_seq = seq.seq.lower()
-    return final_seq
+    return seq.seq.lower()
 
 
 def get_flank_start(start, flank):
@@ -289,10 +293,7 @@ def write_sam_file(ref_interval, target_interval, ref_gene, target_gene, ref_seq
     else:
         hard_clip_start = ref_interval[0] - ref_gene.start
     cigar_string, target_start_offset = make_cigar(reference_traceback, target_traceback, hard_clip_start,)
-    if is_reverse:
-        bit_flag = 16
-    else:
-        bit_flag = 0
+    bit_flag = 16 if is_reverse else 0
     target_start_with_flank = get_flank_start(target_interval[0], flank)
     sam_fields = np.array([target_gene.id, bit_flag, target_gene.seqid,
                            target_start_with_flank + int(
@@ -311,12 +312,10 @@ def make_cigar(reference_traceback, target_traceback, hard_clip_start):
             expanded_cigar+= '='
         elif reference_traceback[i] == "-":
             expanded_cigar += 'D'
-        elif reference_traceback[i] != "-" and target_traceback[i]=="-":
+        elif target_traceback[i] == "-":
             expanded_cigar += 'I'
-        elif reference_traceback[i] != "-" and target_traceback[i]!="-":
-            expanded_cigar += 'X'
         else:
-            print(reference_traceback[i], target_traceback[i])
+            expanded_cigar += 'X'
     cigar = condense_cigar_string(expanded_cigar, hard_clip_start)
     return cigar, start
 
@@ -327,5 +326,5 @@ def condense_cigar_string(expanded_cigar, hard_clip_start):
         cigar_numbers = cigar_numbers[1:]
     cigar = ''.join([i for sub in cigar_numbers for i in sub])
     if hard_clip_start > 0:
-        cigar = str(hard_clip_start) + 'H' + cigar
+        cigar = f'{str(hard_clip_start)}H{cigar}'
     return cigar

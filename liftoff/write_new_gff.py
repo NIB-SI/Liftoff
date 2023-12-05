@@ -5,15 +5,12 @@ import sys
 def write_header(f, out_type):
     if out_type == 'gff3':
         f.write('##gff-version 3' + "\n")
-    f.write("# Liftoff v" + __version__ + "\n")
+    f.write(f"# Liftoff v{__version__}" + "\n")
     f.write("# " + " ".join(sys.argv) + "\n")
 
 
 def write_new_gff(lifted_features, args, feature_db):
-    if args.o != 'stdout':
-        f = open(args.o, 'w')
-    else:
-        f = sys.stdout
+    f = open(args.o, 'w') if args.o != 'stdout' else sys.stdout
     out_type = feature_db.dialect['fmt']
     write_header(f, out_type)
     parents = liftoff_utils.get_parent_list(lifted_features)
@@ -54,7 +51,7 @@ def add_attributes(parent, copy_num, args):
         if key in parent.attributes:
             del  parent.attributes[key]
     parent.attributes["extra_copy_number"] = [str(copy_num)]
-    parent.attributes["copy_num_ID"] = [parent.id + "_" + str(copy_num)]
+    parent.attributes["copy_num_ID"] = [f"{parent.id}_{str(copy_num)}"]
 
     if float(parent.attributes["coverage"][0]) < args.a:
         parent.attributes["partial_mapping"] = ["True"]
@@ -99,12 +96,11 @@ def write_line(feature, out_file, output_type):
 def make_gff_line(attr_dict, feature):
     attributes_str = "ID=" + attr_dict["ID"][0] + ";" #make ID the first printed attribute
     for attr in attr_dict:
-        if attr != "copy_id":
-            value_str = ""
-            for value in attr_dict[attr]:
-                value_str += value + ","
-            if attr != "ID":
-                attributes_str += (attr + "=" + value_str[:-1] + ";")
+        if attr == "ID":
+            value_str = "".join(f"{value}," for value in attr_dict[attr])
+        elif attr != "copy_id":
+            value_str = "".join(f"{value}," for value in attr_dict[attr])
+            attributes_str += f"{attr}={value_str[:-1]};"
     return feature.seqid + "\t" + feature.source + "\t" + feature.featuretype + "\t" + str(feature.start) + \
            "\t" + str(feature.end) + "\t" + "." + "\t" + feature.strand + "\t" + "." + "\t" + attributes_str[:-1]
 
@@ -113,7 +109,7 @@ def edit_copy_ids(feature):
     copy_num = feature.attributes["extra_copy_number"][0]
     for attr in feature.attributes:
         if attr[-3:] == "_id":
-            new_attr_dict[attr] = [feature.attributes[attr][0] + "_" + copy_num]
+            new_attr_dict[attr] = [f"{feature.attributes[attr][0]}_{copy_num}"]
         elif attr == 'ID':
             new_attr_dict["ID"] = [feature.attributes["ID"][0]+ "_" + copy_num]
         elif attr == "Parent":

@@ -27,8 +27,11 @@ def find_best_mapping(alignments, query_length, parent, feature_heirarchy, previ
 
 def intialize_graph():
     aln_graph = nx.DiGraph()
-    node_dict = {}
-    node_dict[0] = aligned_seg.aligned_seg("start", "start", "start", -1, -1, -1, -1, -1, [])
+    node_dict = {
+        0: aligned_seg.aligned_seg(
+            "start", "start", "start", -1, -1, -1, -1, -1, []
+        )
+    }
     aln_graph.add_node(0)
     return node_dict, aln_graph
 
@@ -79,12 +82,14 @@ def sort_alignments(parent, previous_feature_start, previous_feature_ref_start, 
 
 
 def remove_alignments_with_overlap(alignments, inter, parent, parent_dict, lifted_features_list):
-    aln_ids = set([aln.aln_id for aln in alignments])
+    aln_ids = {aln.aln_id for aln in alignments}
     alignments_to_keep = []
     for aln_id in aln_ids:
         single_alignment_group = [aln for aln in alignments if aln.aln_id == aln_id]
-        min_ref_start = min([aln.reference_block_start for aln in single_alignment_group])
-        max_ref_end = max([aln.reference_block_end for aln in single_alignment_group])
+        min_ref_start = min(
+            aln.reference_block_start for aln in single_alignment_group
+        )
+        max_ref_end = max(aln.reference_block_end for aln in single_alignment_group)
         chrom = single_alignment_group[0].reference_name
         strand = get_strand(single_alignment_group[0], parent)
         feature_name = single_alignment_group[0].query_name
@@ -108,10 +113,7 @@ def distance_difference(feature_ref_start, feature_target_start, previous_featur
 
 def get_strand(aln, parent):
     if aln.is_reverse:
-        if parent.strand == "-":
-            strand = '+'
-        else:
-            strand = "-"
+        strand = '+' if parent.strand == "-" else "-"
     else:
         strand = parent.strand
     return strand
@@ -130,7 +132,7 @@ def is_valid_alignment(previous_node, aln, node_dict, parent, inter, parent_dict
 def spans_overlap_region(from_node, to_node, parent, intervals, parent_dict, lifted_features_list):
     if from_node.reference_name != to_node.reference_name:
         return False
-    if intervals == None:
+    if intervals is None:
         return False
     target_chrm = from_node.reference_name
     node_overlap = get_node_overlap(from_node, to_node)
@@ -222,17 +224,22 @@ def is_valid_edge(from_node_name, to_node_name, parent, intervals, parent_dict, 
         return False
     if from_node.reference_name != to_node.reference_name:
         return False
-    else:
-        expected_distance = to_node.query_block_end - from_node.query_block_start
-        actual_distance = to_node.reference_block_end - from_node.reference_block_start
-        if to_node.reference_block_start < from_node.reference_block_end:
-            return False
-        if (actual_distance > args.d * expected_distance):
-            return False
-        if spans_overlap_region(from_node, to_node, parent, intervals, parent_dict,
-                                lifted_features_list):
-            return False
-    return True
+    if to_node.reference_block_start < from_node.reference_block_end:
+        return False
+    expected_distance = to_node.query_block_end - from_node.query_block_start
+    actual_distance = to_node.reference_block_end - from_node.reference_block_start
+    return (
+        False
+        if (actual_distance > args.d * expected_distance)
+        else not spans_overlap_region(
+            from_node,
+            to_node,
+            parent,
+            intervals,
+            parent_dict,
+            lifted_features_list,
+        )
+    )
 
 
 def add_target_node(aln_graph, node_dict, query_length, children_coords, parent, args):
@@ -249,7 +256,7 @@ def add_target_node(aln_graph, node_dict, query_length, children_coords, parent,
 
 def is_terminal_node(node, aln_graph):
     successors = aln_graph.successors(node)
-    for successor in successors:
+    for _ in successors:
         return False
     return True
 
@@ -326,9 +333,8 @@ def find_nearest_aligned_start(relative_start, relative_end, shortest_path_nodes
         if relative_start <= node.query_block_end:
             if relative_start >= node.query_block_start:
                 nearest_start = relative_start
-            else:
-                if node.query_block_start < relative_end:
-                    nearest_start = node.query_block_start
+            elif node.query_block_start < relative_end:
+                nearest_start = node.query_block_start
             return nearest_start
     return nearest_start
 
@@ -340,9 +346,8 @@ def find_nearest_aligned_end(shortest_path_nodes, relative_end, relative_start):
         if relative_end <= node.query_block_end:
             if relative_end >= node.query_block_start:
                 nearest_end = relative_end
-            else:
-                if i > 0 and shortest_path_nodes[i - 1].query_block_end > relative_start:
-                    nearest_end = shortest_path_nodes[i - 1].query_block_end
+            elif i > 0 and shortest_path_nodes[i - 1].query_block_end > relative_start:
+                nearest_end = shortest_path_nodes[i - 1].query_block_end
             break
     if nearest_end == -1 and node.query_block_end < relative_end and node.query_block_end > relative_start:
         nearest_end = node.query_block_end

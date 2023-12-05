@@ -35,9 +35,14 @@ def check_homologues(all_lifted_features, lifted_features_to_check, parent_dict,
 
 def build_interval_list(features):
     inter = InterLap()
-    feature_coords = [[feature.start - 1, feature.end - 1, [feature.attributes["copy_num_ID"][0], feature]] for feature in
-                      features]
-    if len(feature_coords) > 0:
+    if feature_coords := [
+        [
+            feature.start - 1,
+            feature.end - 1,
+            [feature.attributes["copy_num_ID"][0], feature],
+        ]
+        for feature in features
+    ]:
         inter.update(feature_coords)
     return inter
 
@@ -85,9 +90,7 @@ def already_in_list(feature, remap_features):
 
 
 def has_greater_seq_id(feature1, feature2):
-    if feature1.score < feature2.score:
-        return True
-    return False
+    return feature1.score < feature2.score
 
 
 def find_out_of_order_feature(feature_is_copy, ref_parent_order, target_parent_order, feature,
@@ -111,9 +114,12 @@ def find_out_of_order_feature(feature_is_copy, ref_parent_order, target_parent_o
 def check_order(ref_parent_order, target_parent_order, feature, overlap_feature):
     ref_neighbor_upstream = liftoff_utils.find_nonoverlapping_upstream_neighbor(ref_parent_order, feature.id)
     if ref_neighbor_upstream is not None:
-        ref_distance = find_distance_between_features(ref_neighbor_upstream, target_parent_order, feature,
-                                                      overlap_feature)
-        return ref_distance
+        return find_distance_between_features(
+            ref_neighbor_upstream,
+            target_parent_order,
+            feature,
+            overlap_feature,
+        )
     return None
 
 
@@ -168,11 +174,11 @@ def remove_features_and_get_alignments(features_to_remap, lifted_feature_list, a
 
 
 def get_successfully_remapped_features(lifted_feature_list, features_to_remap):
-    successfully_remapped_features = {}
-    for feature_to_remap in features_to_remap:
-        if feature_to_remap in lifted_feature_list:
-            successfully_remapped_features[feature_to_remap] = lifted_feature_list[feature_to_remap]
-    return successfully_remapped_features
+    return {
+        feature_to_remap: lifted_feature_list[feature_to_remap]
+        for feature_to_remap in features_to_remap
+        if feature_to_remap in lifted_feature_list
+    }
 
 
 def remove_unresolved_features(features_to_remap, parent_dict, lifted_feature_list, unmapped_features):
